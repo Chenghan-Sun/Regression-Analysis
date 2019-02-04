@@ -1,1 +1,1 @@
-Mark down some probelms for Regression Analysis
+Mark down some problems for Regression Analysis
