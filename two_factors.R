@@ -70,27 +70,27 @@ for (i in 1:2){
   }
 }
 
+SSAB = 0
 for (i in 1:2){
   for (j in 1:3){
-    SSAB = 10*sum((abij[i,j])^2)
+    SSAB = SSAB + (abij[i,j])^2
   }
 }
-MSAB = SSAB/(2-1)/(3-1)
+
+MSAB = 10*SSAB/(2-1)/(3-1)
 
 # reformulate fitted values
-values_all = c((rep((0.44348), 10)), (rep((0.80997), 10)), 
-               (rep((1.10670), 10)), (rep((0.39823), 10)),
-               (rep((0.58096), 10)), (rep((0.86639), 10)))
-data_new = data.frame(values_all, X_D, X_WG, X_rep)
-
+data_new = data.frame(Y_tran, X_D, X_WG, X_rep)
+SSE = 0
 for (i in c(1:2)){
   for (j in c(1:3)){
     for (k in c(1:10)){
-      SSE = sum((data_new[which(data_new$X_rep=='k' & data_new$X_WG=='j' 
-                                & data_new$X_D =='i'),]$values_all - Y_ijd[i,j])^2)
+      SSE = SSE + (data_new[which(data_new$X_rep==k & data_new$X_WG==j 
+                                & data_new$X_D ==i),]$Y_tran - Y_ijd[i,j])^2
     }
   }
 }             
+MSE = SSE/(10-1)/2/3
 
 # 19-34
 # (a) Estimate u22 with a 95 percent confidence interval
