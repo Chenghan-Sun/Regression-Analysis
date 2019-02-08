@@ -1,0 +1,362 @@
+---
+title: "Two_Factors"
+author: "Chenghan Sun"
+date: "2/7/2019"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+> Data Loading 
+
+```{r}
+setwd("/Users/cs0823/Documents/STA_207/HW3")
+data = read.table(file = "Data19_18.csv", header= FALSE, sep = ",")
+colnames(data)[colnames(data)=="V1"] <- "Days"
+colnames(data)[colnames(data)=="V2"] <- "Duration"
+colnames(data)[colnames(data)=="V3"] <- "Weight_Gain"
+colnames(data)[colnames(data)=="V4"] <- "Replication"
+```
+
+# 19.18
+## part (a) Obtain the fitted values and residuals for ANOVA model 
+```{r}
+X_D_fac = factor(data$Duration)
+X_WG_fac = factor(data$Weight_Gain)
+Y = data$Days
+Y_tran = log10(Y+1)
+fit = aov(Y_tran ~ X_D_fac+X_WG_fac+X_D_fac*X_WG_fac, data=data)
+values = fitted.values(fit)
+res = fit$residuals
+```
+
+> The code above construct two-factors full mode. The fitted values are given by `values` from the model `fit`:\
+Ybar_11_dot = 0.4434824, Ybar_12_dot = 0.8099675, Ybar_13_dot = 1.1066998\
+Ybar_21_dot = 0.3982271, Ybar_22_dot = 0.5809641, Ybar_23_dot = 0.8663947\
+
+> The residuals are given by `res` from [1:60]:\
+-0.44348243  0.03363883 -0.14245243  0.15857756 -0.44348243  0.03363883 -0.44348243  0.33466882  0.40161561  0.51076008\ -0.33284626 -0.11099751  0.09312248  0.30397584  0.39415247 -0.11099751 -0.20790752 -0.50893752 -0.03181626  0.51225178\  0.09742014 -0.06530715 -0.15245733 -0.32854859  0.30827351  0.12374908 -0.20360985  0.38466185 -0.50463985  0.34045819\ 
+-0.39822712 -0.09719713 -0.09719713 -0.39822712  0.30074288  0.07889413  0.50486286  0.30074288 -0.39822712  0.20383287\  0.19718720  0.02109594 -0.10384280 -0.58096405 -0.27993405 -0.27993405  0.02109594  0.26413399  0.32212594  0.41903595\  
+0.17499803  0.08784785  0.24754870 -0.26433466 0.03669533 0.33772533 -0.16742465  0.13360535 -0.02129661 -0.56536466\ 
+
+## Part (b)  residual dot plots for the treatments
+```{r}
+X_D = data$Duration
+X_WG = data$Weight_Gain
+X_rep = data$Replication
+par(mfrow=c(1,2))
+res_plot_D = plot(X_D, res, main="Plot of Duration vs. Residuals", ylab = "Residual", 
+                  xlab = "Duration", col='red', xaxt="n")
+axis(1, at=1:2)
+res_plot_WG = plot(X_WG, res, main="Plot of Weight Gain vs. Residuals", ylab = "Residual", 
+                   xlab = "Weight Gains", col='green', xaxt="n")
+axis(1, at=1:3)
+```
+
+> The residuals vs. factor levels plot provides graphical diagnosis about whether the variances of the error terms, e{ijk}, are\ equal or if there are any obvious outliers for i=1,...,a; j=1,...,b; k=1,...,n. No obvious outlier observed from the plots above,\ however, the variances of the error terms are not equal. This violates the model component where var(e{ijk}) are constant.\
+
+## Part (c) Prepare a normal probability plot of the residuals
+```{r}
+quantiles = qnorm(((1:length(res)) - 0.5) / length(res))
+plot(quantiles,sort((res - mean(res)) / sd(res)), xlab="Theoretical Quantiles", ylab="Sample Quantiles", main = "Q-Q Plot")
+abline(0,1)
+
+cor(quantiles,sort(res))
+```
+
+> The residuals do not seem to deviate much from the theoretical line on the normal Q-Q plot. Thus, The normality assumption is\ validated.\ 
+
+# 19-19
+## Part (a) Prepare an estimated treatment means plot
+```{r}
+avfactorD = tapply(Y_tran, X_D_fac, mean)
+avfactorWG = tapply(Y_tran, X_WG_fac, mean)
+# define levels of factor A&B, a$b, and sample size n
+a = 2
+b = 3
+n = 10
+
+Dlevel = 1:a
+WGlevel = 1:b
+par(mfrow=c(1,3))
+# main effec plot of Duration
+plot(Dlevel, avfactorD, type="o", xlab = "Duration", ylab = "logY", main= "Main Effect of Duration")
+# main effec plot of Weight Gain
+plot(WGlevel, avfactorWG, type="o", xlab = "WeightGain", ylab = "logY", main= "Main Effect of WeightGain")
+# interaction plot
+interaction.plot(X_D_fac, X_WG_fac, Y_tran, xlab = "Duration", ylab = "logY", trace.label = "WeightGain", 
+                 main= "Interaction Plot")
+```
+
+> The interaction exists because the difference between Weight Gain 2 and Weight Gain 1 reduces compared with Duration 1 to\ Duration 2\
+
+## Part (b) Obtain the analysis of variance table. 
+```{r}
+anova(fit)
+```
+
+> The ANOVA table is shown above.\
+
+## Part (c) Test whether or not the two factors interact; use alpha = .05
+```{r}
+Y_ijd = matrix(1, nrow = 2, ncol = 3)
+# from fitted values
+Y_ijd[1,] = c(0.44348, 0.80997, 1.10670)
+Y_ijd[2,] = c(0.39823, 0.58096, 0.86639)
+Y_idd = matrix(1, nrow = 2, ncol = 1)
+Y_idd[1,] = sum(Y_ijd[1,])/3
+Y_idd[2,] = sum(Y_ijd[2,])/3
+Y_ddd = sum(Y_idd[,1])/2
+alphai = t(c(Y_idd[1,1]-Y_ddd, Y_idd[2,1]-Y_ddd))
+
+Y_djd = matrix(1, nrow=1, ncol=3)
+Y_djd[,1] = sum(Y_ijd[,1])/2
+Y_djd[,2] = sum(Y_ijd[,2])/2
+Y_djd[,3] = sum(Y_ijd[,3])/2
+betaj = c(Y_djd[1,1]-Y_ddd, Y_djd[1,2]-Y_ddd, Y_djd[1,3]-Y_ddd)
+abij = matrix(1, nrow = 2, ncol = 3)
+
+for (i in 1:a){
+  for (j in 1:b){
+    abij[i,j] = Y_ijd[i,j]-Y_ddd-alphai[i]-betaj[j]
+  }
+}
+
+SSAB = 0
+for (i in 1:a){
+  for (j in 1:b){
+    SSAB = SSAB + (abij[i,j])^2
+  }
+}
+
+MSAB = n*SSAB/(a-1)/(b-1)
+
+# reformulate fitted values
+data_new = data.frame(Y_tran, X_D, X_WG, X_rep)
+SSE = 0
+for (i in c(1:a)){
+  for (j in c(1:b)){
+    for (k in c(1:n)){
+      SSE = SSE + (data_new[which(data_new$X_rep==k & data_new$X_WG==j 
+                                & data_new$X_D ==i),]$Y_tran - Y_ijd[i,j])^2
+    }
+  }
+}   
+
+MSE = SSE/(n-1)/a/b
+F_star_1 = MSAB/MSE
+alpha_1 = 0.05 #given significance level 
+F_1 = qf(1-alpha_1, (a-1)*(b-1), (n-1)*a*b)
+p_value_1 = pf(q=F_star_1, df1=(a-1)*(b-1), df2=(n-1)*a*b, lower.tail = FALSE)
+```
+
+> H0: all (alpha_beta)ij equal 0; Ha: not all (alpha_beta)ij equal 0.\
+> From the analysis above, MSAB = 0.05995319, MSE = 0.1012537, so F_star = MSAB/MSE = 0.5921084.\
+F(0.95; 2, 54) = 3.168246. Since F_star < F(0.95; 2, 54), conclude H0. The p_value = 0.5567108.\
+> We conclude that a reduced model is prefered.\ 
+
+## Part (d) Test whether or not main effects for duration and weight gain are present
+```{r}
+SSA = 0
+for (i in c(1:a)){
+  SSA = SSA + (alphai[i])^2
+}
+SSA = SSA*n*b
+MSA = SSA/(a-1)
+F_star_2 = MSA/MSE
+F_2 = qf(1-alpha_1, (a-1), (n-1)*a*b)
+p_value_2 = pf(q=F_star_2, df1=(a-1), df2=(n-1)*a*b, lower.tail = FALSE)
+
+SSB = 0
+for (j in c(1:b)){
+  SSB = SSB + (betaj[j])^2
+}
+SSB = SSB*n*a
+MSB = SSB/(b-1)
+F_star_3 = MSB/MSE
+F_3 = qf(1-alpha_1, (b-1), (n-1)*a*b)
+p_value_3 = pf(q=F_star_3, df1=(b-1), df2=(n-1)*a*b, lower.tail = FALSE)
+```
+
+> (i) H0: all alpha_i equal 0; Ha: not all alpha_i equal 0.\
+> From the analysis above, MSA = 0.4413038, MSE = 0.1012537, so F_star = MSA/MSE = 4.358395.\
+F(0.95; 1, 54) = 4.019541. Since F_star > F(0.95; 1, 54), reject H0. The p_value = 0.0415594.\
+\
+> (ii) H0: all beta_j equal 0; Ha: not all beta_j equal 0.\
+> From the analysis above, MSB = 1.600478, MSE = 0.1012537, so F_star = MSA/MSE = 15.80661.\
+F(0.95; 2, 54) = 3.168246. Since F_star > F(0.95; 2, 54), reject H0. The p_value = 3.944846e-06.\
+
+## Part (e)
+```{r}
+corrected.alpha.upperbound = 1- (1-alpha_1)^b
+corrected.alpha.upperbound 
+```
+
+> The Kimball inequality upper bound of alpha is 0.142625.\
+
+## Part (f)
+> Result of part (c) supports that there is no interaction. Result of part (d) supports that the model should only has Factor B\ (Weight gain). Yes, these results are consistent with interaction  graph and main effect graph.\
+
+# 19-34
+## Part (a) Estimate u22 with a 95 percent confidence interval.
+```{r}
+# From Part (c) in 19-19, a reduced model without interaction terms is prefered. Thus, we use pooling of sums of squares.
+X_D_means = tapply(Y_tran, X_D, mean)
+X_WG_means = tapply(Y_tran, X_WG, mean)
+Y_tran_mean = mean(Y_tran)
+D_effects = X_D_means - Y_tran_mean
+WG_effects = X_WG_means - Y_tran_mean
+
+values_new = c()
+for (i in 1:a) {
+  for (j in 1:b) {
+    values_new = c(values_new, rep(Y_tran_mean + D_effects[i] + WG_effects[j], 10))
+  }
+}
+fitted_new = values_new
+res_new = Y_tran - values_new
+
+# For 95% C.I. of u22
+m = n*a*b - a - b + 1
+
+Ybar_22d = mean(data_new[X_D==2 & X_WG==2,]$Y_tran)
+MSE_new = sum(res_new^2) / (n*a*b - a - b + 1)
+se = sqrt(MSE_new/n)
+
+lower = Ybar_22d - qt(1-alpha_1/2, (n*a*b - a - b + 1)) * se
+upper = Ybar_22d + qt(1-alpha_1/2, (n*a*b - a - b + 1)) * se
+c(lower, upper)
+c(10^lower-1, 10^upper-1)
+```
+
+> We are 95% confident that the true mean number of days hospitalized is between 1.403599 and 5.040406.\ 
+
+## Part (b) Estimate D = u23 - u21 with a 95 percent confidence interval
+```{r}
+Ybar_23d = mean(data_new[X_D==2 & X_WG==3,]$Y_tran)
+Ybar_21d = mean(data_new[X_D==2 & X_WG==1,]$Y_tran)
+D = Ybar_23d - Ybar_21d
+MSE_new = sum(res_new^2) / (n*a*b - a - b + 1)
+se = sqrt(2 * MSE_new / n)
+
+lower = D - qt(1-alpha_1/2, (n*a*b - a - b + 1)) * se
+upper = D + qt(1-alpha_1/2, (n*a*b - a - b + 1)) * se
+c(lower, upper)
+c(10^lower-1, 10^upper-1)
+```
+
+> We are 95% confident that the true difference in the mean number of days hospitalized between patients with long treatment\ duration (Factor A = 2) and substantial weight gain (Factor B = 3) and patients with long treatment duration (Factor A = 2) and\ mild weight gain (Factor B = 1) is between 0.532 and 4.638 days.\
+
+## Part (c) Prepare separate bar graphs of the estimated factor A and factor B level means
+```{r}
+par(mfrow=c(1,2))
+barplot(tapply(Y_tran, X_D, mean), names.arg=c("1","2"),
+        ylab="Mean", main="Duration Level Means")
+barplot(tapply(Y_tran, X_WG, mean), names.arg=c("1","2","3"),
+        ylab="Mean", main="Weight Gain Level Means")
+```
+
+> The plot above shows that shorter treatment duration leads to a greater number of days hospitalized.\
+
+## Part (d) Multiple comparison procedure selection 
+```{r}
+# Tukey multiplier for all differences in Duration level means
+alpha_2 = 0.1
+(1/sqrt(2)) * qtukey(1-alpha_2, a, n*a*b - a - b + 1)
+# Tukey multiplier for all differences in Weight Gain level means
+(1/sqrt(2)) * qtukey(1-alpha_2, b, n*a*b - a - b + 1)
+# Bonferroni multiplier for all pairwise comparisons
+g = 4
+qt(1-.1/(2*g), n*a*b - a - b + 1)
+```
+
+> Tukey procedure is appropriate as it has a smaller multiplier than the Bonferroni multiplier.\ 
+
+## Part (e) Using the Bonferroni procedure
+```{r}
+D1 = X_D_means[1] - X_D_means[2]
+D2 = X_WG_means[1] - X_WG_means[2]
+D3 = X_WG_means[1] - X_WG_means[3]
+D4 = X_WG_means[2] - X_WG_means[3]
+
+se_D1 = sqrt(2 * MSE_new / (n*b))
+se_D2 = sqrt(2 * MSE_new / (n*a))
+se_D3 = sqrt(2 * MSE_new / (n*a))
+se_D4 = sqrt(2 * MSE_new / (n*a))
+
+B = qt(1-alpha_2/(2*g), n*a*b - a - b + 1)
+
+c(D1 - B * se_D1, D1 + B * se_D1)
+c(D2 - B * se_D2, D2 + B * se_D2)
+c(D3 - B * se_D3, D3 + B * se_D3)
+c(D4 - B * se_D4, D4 + B * se_D4)
+
+plot(c(1,2,3,4), c(D1,D2,D3,D4), xaxt='n',
+     xlab="Pair", ylab="Difference in Factor Level Means",
+     main="CI's for Factor Level Means")
+axis(1, at=1:4)
+segments(x0=1, y0=D1-B*se_D1, x1=1, y1=D1+B*se_D1)
+segments(x0=2, y0=D2-B*se_D2, x1=2, y1=D2+B*se_D2)
+segments(x0=3, y0=D3-B*se_D3, x1=3, y1=D3+B*se_D3)
+segments(x0=4, y0=D4-B*se_D4, x1=4, y1=D4+B*se_D4)
+```
+
+> We are 90% confident that the difference in means between Duration level 1 and level 2 is between -0.01633155 and 0.35937419.\ Since this interval includes 0, we can say that there is no significant difference between the two factor level means.\
+> We are 90% confident that the true difference in means between Weight Gain level 1 and level 2 is between -0.50468285 and\ -0.04453916.\
+> We are 90% confident that the true difference in means between Weight Gain level 1 and level 3 is between -0.796 and -0.336.\
+> We are 90% confident that the true difference in means between Weight Gain level 2 and level 3 is between -0.521 and -0.061.\
+> For Duration, there is a positive difference between level 1 and level 2. For Weight Gain, there are negative differences\ between level 1 and level 2, level 1 and level 3, and level 2 and level 3. These results are consistent with part (c).\
+
+## Part (f)
+```{r}
+L = (0.3*sum(Y_ijd[1:a,1]) + 0.4*sum(Y_ijd[1:a,2]) + 0.3*sum(Y_ijd[1:a,3]))/2
+
+T_value = qt(1-.05/2, n*a*b - a - b + 1)
+c = c(0.3,0.4,0.3,0.3,0.4,0.3)
+se_L = sqrt(sum(c^2) * MSE_new/n/b)
+
+lower = L - T_value*se_L
+upper = L + T_value*se_L
+c(lower, upper)
+c(10^lower-1, 10^upper-1)
+```
+
+> Yes. The entire CI = [3.028454 5.247031] is less than 7.\ 
+
+# 19-41
+```{r}
+pool_1 = c()
+pool_2 = c()
+# Given sigma = 0.32
+sigma = 0.32
+
+for (i in 3:20) {
+
+na = i*3  # sample size in each Duration level
+nb = i*2  # sample size in each Weight Gain level
+m = (i - 1) *a*b  # Degree of freedom of SSE
+
+# Estimated S^2 for linear comparison within Duration levels
+sa = (sum((c(1, -1)^2))/nb)*(sigma^2)
+
+# Estimated S^2 for linear comparison within Weight Gain levels
+C2_b = c(1,-1,0)
+C3_b = c(1,0,-1)
+C4_b = c(0,1,-1)
+sb = (sum(C2_b^2)/na)*(sigma^2)
+ 
+  # The width
+  width_D = B*sqrt(sa)
+  width_WG = B*sqrt(sb)
+
+  pool_1[i] = width_D
+  pool_2[i] = width_WG
+}
+
+ANS = data.frame(n.size = c(1:20), L1.width = pool_1, L2.width = pool_2)
+ANS[12:15,] 
+```
+
+> For each sample size = 14, the width of C.I. meets the requirement.\ 
