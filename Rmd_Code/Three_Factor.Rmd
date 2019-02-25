@@ -1,0 +1,384 @@
+---
+title: "Three_Factor"
+author: "Chenghan Sun"
+output: html_document
+---
+> Data loading 
+
+```{r}
+setwd("/Users/cs0823/Documents/STA_207/HW4")
+data = read.table(file = "Data24_12.csv", header= FALSE, sep = ",")
+colnames(data)[colnames(data)=="V1"] <- "Y"
+colnames(data)[colnames(data)=="V2"] <- "A"
+colnames(data)[colnames(data)=="V3"] <- "B"
+colnames(data)[colnames(data)=="V4"] <- "C"
+```
+
+# 24-12
+part (a)
+```{r}
+X_A_fac = factor(data$A)
+X_B_fac = factor(data$B)
+X_C_fac = factor(data$C)
+Y = data$Y
+fit = aov(Y ~ X_A_fac+X_B_fac+X_C_fac+X_A_fac*X_B_fac+X_A_fac*X_C_fac+X_B_fac*X_C_fac+X_A_fac*X_B_fac*X_C_fac, data=data)
+values = fitted.values(fit)
+res = fit$residuals
+```
+
+> The residuals based on ANOVA model 24-14:
+> res
+    1     2     3     4     5     6     7     8     9    10    11    12    13    14    15    16    17    18    19    20 
+ 31.4 -43.6  17.4  20.4 -25.6 -30.0  48.0  18.0 -55.0  19.0  44.8 -23.2 -33.2  20.8  -9.2  -3.4 -12.4   0.6 -25.4  40.6 
+   21    22    23    24    25    26    27    28    29    30    31    32    33    34    35    36    37    38    39    40 
+ -1.2 -28.2 -17.2  13.8  32.8 -18.2  15.8   5.8  25.8 -29.2  29.6  39.6 -32.4 -34.4  -2.4  -6.6 -22.6  10.4  21.4  -2.6 
+   41    42    43    44    45    46    47    48    49    50    51    52    53    54    55    56    57    58    59    60 
+ 27.6 -34.4 -26.4  50.6 -17.4  -4.6  12.4  25.4 -34.6   1.4   0.6  -0.4  14.6 -20.4   5.6 -19.4   4.6 -43.4  50.6   7.6 
+
+part(b) Prepare normal probability plot for the residuals 
+```{r}
+quantiles = qnorm(((1:length(res)) - 0.5) / length(res))
+plot(quantiles,sort((res - mean(res)) / sd(res)), xlab="Theoretical Quantiles", ylab="Sample Quantiles", main = "Q-Q Plot")
+abline(0,1)
+
+cor(quantiles,sort(res))
+```
+> The coefficient of correlation is found to be 0.9906479.
+> The residuals do not seem to deviate much from the theoretical line on the normal Q-Q plot. Thus, The normality assumption is valid. 
+
+24-13
+part (a) AB plots 
+```{r}
+library(dae)
+avfactorA = tapply(Y, X_A_fac, mean)
+avfactorB = tapply(Y, X_B_fac, mean)
+avfactorC = tapply(Y, X_C_fac, mean)
+# define levels of factor A&B&C, a&b&c, and sample size n
+a = 2
+b = 3
+c = 2
+n = 5
+
+Alevel = 1:a
+Blevel = 1:b
+Clevel = 1:c
+par(mfrow=c(3,3))
+# main effec plot of factor A
+plot(Alevel, avfactorA, type="o", xlab = "factor A", ylab = "Y", main= "Main Effect of factor A")
+# main effec plot of factor B
+plot(Blevel, avfactorB, type="o", xlab = "factor B", ylab = "Y", main= "Main Effect of factor B")
+# main effec plot of factor C
+plot(Clevel, avfactorC, type="o", xlab = "factor C", ylab = "Y", main= "Main Effect of factor C")
+# two-way interaction plots
+interaction.plot(X_A_fac, X_B_fac, Y, xlab = "factor A", ylab = "Y", trace.label = "factor B", 
+                 main= "Interaction Plot of factor A and B")
+interaction.plot(X_A_fac, X_C_fac, Y, xlab = "factor A", ylab = "Y", trace.label = "factor C", 
+                 main= "Interaction Plot of factor A and C")
+interaction.plot(X_B_fac, X_C_fac, Y, xlab = "factor B", ylab = "Y", trace.label = "factor C", 
+                 main= "Interaction Plot of factor B and C")
+
+# three-way interaction plots
+#interaction.ABC.plot(Y, X_A_fac, X_B_fac, X_C_fac, data = data, title="A:B:C Interaction Plot")
+
+
+```
+> We can conclude all the interaction terms are presented. 
+
+part (b)
+```{r}
+anova(fit)
+```
+
+part (c)
+```{r}
+X_A = data$A
+X_B = data$B
+X_C = data$C 
+rep = data$V5
+data_fitted = data.frame(values, X_A, X_B, X_C, rep)
+#uhat_ijk = data_fitted$values
+
+uhat_ddd = 0
+for (i in 1:a){
+  for (j in 1:b){
+    for (k in 1:c){ 
+      for (m in 1:n){
+        uhat_ddd = uhat_ddd+(data_fitted[which(data_fitted$X_A==i & data_fitted$X_B==j 
+                                               & data_fitted$X_C==k & data_fitted$rep==m),]$values)
+      }
+    }
+  }
+}
+uhat_ddd = uhat_ddd/n/a/b/c
+
+uhat_idd = 0
+for (j in 1:b){
+  for (k in 1:c){ 
+    for (m in 1:n){
+      uhat_idd = uhat_idd+(data_fitted[which(data_fitted$X_B==j 
+                                             & data_fitted$X_C==k & data_fitted$rep==m),]$values)
+    }
+  }
+}
+uhat_idd = uhat_idd/n/b/c
+alpha_i = uhat_idd - uhat_ddd
+```
+
+```{r}
+uhat_djd = 0
+for (i in 1:a){
+  for (k in 1:c){ 
+    for (m in 1:n){
+      uhat_djd = uhat_djd+(data_fitted[which(data_fitted$X_A==i 
+                                             & data_fitted$X_C==k & data_fitted$rep==m),]$values)
+    }
+  }
+}
+uhat_djd = uhat_djd/n/a/c
+beta_j = uhat_djd - uhat_ddd
+```
+
+```{r}
+uhat_ddk = 0
+for (i in 1:a){
+  for (j in 1:b){ 
+    for (m in 1:n){
+      uhat_ddk = uhat_ddk+(data_fitted[which(data_fitted$X_A==i 
+                                             & data_fitted$X_B==j & data_fitted$rep==m),]$values)
+    }
+  }
+}
+uhat_ddk = uhat_ddk/n/a/b
+gamma_k = uhat_ddk - uhat_ddd
+```
+
+```{r}
+uhat_ijd = 0
+for (k in 1:c){ 
+  for (m in 1:n){
+    uhat_ijd = uhat_ijd+(data_fitted[which(data_fitted$X_C==k & data_fitted$rep==m),]$values)
+  }
+}
+uhat_ijd = uhat_ijd/n/c
+uhat_ijd_new = matrix(1, nrow = 2, ncol = 3)
+uhat_ijd_new[1,] = c(uhat_ijd[1], uhat_ijd[2], uhat_ijd[3])
+uhat_ijd_new[2,] = c(uhat_ijd[4], uhat_ijd[5], uhat_ijd[6])
+
+alpha_beta_ij = matrix(1, nrow = 2, ncol = 3)
+for (i in 1:a){
+  for (j in 1:b){
+    alpha_beta_ij[i,j] = uhat_ijd_new[i,j] - uhat_idd[i] - t(uhat_djd)[j] + uhat_ddd
+  }
+}
+```
+
+```{r}
+uhat_idk = 0
+for (j in 1:b){ 
+  for (m in 1:n){
+    uhat_idk = uhat_idk+(data_fitted[which(data_fitted$X_B==j & data_fitted$rep==m),]$values)
+  }
+}
+uhat_idk = uhat_idk/n/b
+uhat_idk_new = matrix(1, nrow = 2, ncol = 2)
+uhat_idk_new[1,] = c(uhat_idk[1], uhat_idk[2])
+uhat_idk_new[2,] = c(uhat_idk[3], uhat_idk[4])
+
+alpha_gamma_ik = matrix(1, nrow = 2, ncol = 2)
+for (i in 1:a){
+  for (k in 1:c){
+    alpha_gamma_ik[i,k] = uhat_idk_new[i,k] - uhat_idd[i] - t(uhat_ddk)[k] + uhat_ddd
+  }
+}
+```
+
+
+```{r}
+uhat_djk = 0
+for (i in 1:a){ 
+  for (m in 1:n){
+    uhat_djk = uhat_djk+(data_fitted[which(data_fitted$X_A==i & data_fitted$rep==m),]$values)
+  }
+}
+uhat_djk = uhat_djk/n/a
+uhat_djk_new = matrix(1, nrow = 3, ncol = 2)
+uhat_djk_new[1,] = c(uhat_djk[1], uhat_djk[2])
+uhat_djk_new[2,] = c(uhat_djk[3], uhat_djk[4])
+uhat_djk_new[3,] = c(uhat_djk[5], uhat_djk[6])
+
+beta_gamma_jk = matrix(1, nrow = 3, ncol = 2)
+for (j in 1:b){
+  for (k in 1:c){
+    beta_gamma_jk[j,k] = uhat_djk_new[j, k] - uhat_djd[j] - t(uhat_ddk)[k] + uhat_ddd
+  }
+}
+```
+
+> make the dimension of all matrices same 
+
+```{r}
+# initilize squences
+# from the previous results 
+sq_uhat_ijk = c(1218.6, 1051.0, 1274.2, 1122.4, 1218.2, 1051.2, 1036.4, 870.6, 1077.4, 931.6, 1020.4, 860.4)
+sq_uhat_ddd = c(rep(1061.033, 12))
+
+sq_alpha_i = c(rep(alpha_i[1], 6), rep(alpha_i[2], 6))
+sq_beta_j = c(rep(c(-16.88333, -16.88333, 40.36667, 40.36667, -23.48333, -23.48333),2))
+sq_gamma_k = c(rep(c(79.83333, -79.83333), 6))
+
+sq_alpha_beta_ij = c(-4.25, -4.25, 2, 2, 2.25, 2.25, 4.25, 4.25, -2, -2, -2.25, -2.25)
+sq_alpha_gamma_ik = c(rep(c(1.233333, -1.233333),3), rep(c(-1.233333, 1.233333),3))
+sq_beta_gamma_jk = c(rep(c(3.516667, -3.516667, -5.433333, 5.433333, 1.916667, -1.916667),2))
+
+alpha_beta_gamma_ijk = sq_uhat_ijk - (sq_uhat_ddd + sq_alpha_i+ sq_beta_j+ sq_gamma_k+ 
+                                        sq_alpha_beta_ij+ sq_alpha_gamma_ik + sq_beta_gamma_jk)
+```
+
+```{r}
+abg_ijk_data = data.frame(alpha_beta_gamma_ijk, c(rep(1,6), rep(2,6)), c(1,1,2,2,3,3,1,1,2,2,3,3),
+                          c(1,2,1,2,1,2,1,2,1,2,1,2))
+
+colnames(abg_ijk_data)[colnames(abg_ijk_data)=="c.rep.1..6...rep.2..6.."] <- "index_i"
+colnames(abg_ijk_data)[colnames(abg_ijk_data)=="c.1..1..2..2..3..3..1..1..2..2..3..3."] <- "index_j"
+colnames(abg_ijk_data)[colnames(abg_ijk_data)=="c.1..2..1..2..1..2..1..2..1..2..1..2."] <- "index_ik"
+
+SSABC = 0
+for (i in 1:a){
+  for (j in 1:b){
+    for (k in 1:c){
+      SSABC = SSABC + (abg_ijk_data[i,j,k])^2
+    }
+  }
+}
+
+MSABC = 2*SSABC/(a-1)/(b-1)/(c-1)
+```
+
+> H0: all (alpha_beta_gamma)ijk equal 0; Ha: not all (alpha_beta_gamma)ijk equal 0.\
+> From the analysis above, MSABC = 9.517, MSE = 858.04, so F_star = MSABC/MSE = 0.01.\
+F(0.95; 2, 48) = 3.19. Since F_star << F(0.95; 2, 48), conclude H0. The p_value = 0.99.\
+
+24.13
+part (d) test AB,AB, BC interactions
+From the previous ANOVA table and calculation,
+1. we have $H_0: (\alpha\beta)_{ij}=0,\forall i,j$ vs. $H_1$: not all $(\alpha\beta)_{ij}=0$,
+$F^* = MSAB/MSE = 0.32$,
+Reject $H_0$ if $F^*>F(0.95,2,60-12)=3.19$,
+So we cannot reject $H_0$. $P = 0.7$.
+
+2. we have $H_0: (\alpha\gamma)_{ij}=0,\forall i,j$ vs. $H_1$: not all $(\alpha\hamma)_{ij}=0$,
+$F^* = MSAC/MSE = 0.11$,
+Reject $H_0$ if $F^*>F(0.95,1,60-12)=4.04$,
+So we cannot reject $H_0$. $P = 0.8$.
+
+3.we have $H_0: (\abeta\gamma)_{ij}=0,\forall i,j$ vs. $H_1$: not all $(\beta\hamma)_{ij}=0$,
+$F^* = MSBC/MSE = 0.53$,
+Reject $H_0$ if $F^*>F(0.95,2,60-12)=3.19$,
+So we cannot reject $H_0$. $P = 0.6$.
+
+
+part (e) test A,B,C main effects.
+1. $H_0: \alpha_i=0,\forall i$ vs. $H_1$: not all $\alpha_i=0$,
+$F^* = MSA/MSE = 629.76$,
+Reject $H_0$ if $F^*>F(0.95,1,60-12)=4.04$,
+Therefore, we reject $H_0$, $P < 0.001$.
+
+2. $H_0: \beta_j=0,\forall j$ vs. $H_1$: not all $\beta_j=0$.
+$F^* = MSB/MSE = 28.74$,
+Reject $H_0$ if $F^*>F(0.95,2,60-12)=3.19$,
+Therefore, we reject $H_0$, $P < 0.001$.
+
+3. $H_0: \gamma_k=0,\forall k$ vs. $H_1$: not all $\gamma_k=0=0$,
+$F^* = MSC/MSE = 445.67$
+Reject $H_0$ if $F^*>F(0.95,1,60-12)=4.04$
+Therefore, we reject $H_0$, $P < 0.001$
+
+part (f)
+There seems not to exist ABC, AB, AC,BC interaction term, and main effects $\alpha$, $\beta$ seem to exist.
+```{r}
+1-(1-0.05)^7
+```
+The upper bount is 0.30167
+
+part (g)
+The result from f confirms our analysis in part a.
+
+24.14
+part (a)
+```{r}
+#calculate Y bar
+mean1 = aggregate(data$Y,list(data$A),mean)
+mean2 = aggregate(data$Y,list(data$B),mean)
+mean3 = aggregate(data$Y,list(data$C),mean)
+# mean1
+# mean2
+# mean3
+
+#calculate D estimate
+D = 1:5
+D[1] = 1155.9333-  966.1333
+D[2] =  1044.15 - 1101.40
+D[3] =  1044.15 - 1037.55
+D[4] =  1101.40 - 1037.55
+D[5] = 1140.867 - 981.200
+cat("Estimate of D is",D,"\n")
+
+#calculate muhat ijk.
+muijk = c(1:12)
+muijk = as.numeric(muijk)
+for (i in (1:12)){
+  yijk = sum(data$Y[((i-1)*5+1):(i*5)])
+  muijk[i] = yijk/5
+}
+
+#calculate SSE
+s = c(1:60)
+for (i in c(1:12)){
+  for (j in c(1:5)){
+  s[(i-1)*5+j] = (data$Y[(i-1)*5+j] - muijk[i])^2
+  }
+}
+SSE = sum(s)
+MSE = SSE/(4*2*3*2)
+
+#calculate s(D)
+SD = 1:5
+a=2
+b=3
+c=2
+SD[1] = sqrt((2/(5*b*c))*MSE)
+SD[2] = sqrt((2/(5*a*c))*MSE)
+SD[3] = sqrt((2/(5*b*c))*MSE)
+SD[4] = sqrt((2/(5*b*c))*MSE)
+SD[5] = sqrt((2/(5*b*a))*MSE)
+B = qt(1-0.05/10,48)
+
+#construct C.I.
+CIL = 1:5
+CIU = 1:5
+for(i in 1:5){
+  CIL[i] = D[i] - B*SD[i]
+  CIU[i] = D[i] + B*SD[i]
+  cat("Confidence Interval of D",i,"is(",CIL[i],",",CIU[i],")\n")
+}
+```
+We have $\bar{Y}_1... = 1155.9333$, $\bar{Y}_2... = 966.1333$, 
+$\bar{Y}_.1.. = 1044.15$, $\bar{Y}_.2.. = 1101.40$ , $\bar{Y}_.3.. = 1037.55$,
+$\bar{Y}_..1. = 1040.867$ , $\bar{Y}_..2. = 981.200$.
+
+From the C.I., we can see that only D3 includes0. Thus, factor A means are different, factor C means are different. Factor B mean at level 2 is different from means at level 1 and 3.
+
+part (b)
+```{r}
+means231 = aggregate(data$Y,list(data$A,data$B,data$C),mean)
+hatmu231 = 1020.4
+cat("muhat231 is",hatmu231,"\n")
+t = qt(0.974,48)
+cat("t value is",t,"\n")
+s = sqrt(MSE/5)
+cat("S(mu231) is",s,"\n")
+CIL = hatmu231 - t*s
+CIU = hatmu231 + t*s
+cat("Confidence Interval is (",CIL,",",CIU,")\n")
+```
+
