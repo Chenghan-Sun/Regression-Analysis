@@ -164,15 +164,3 @@ T_test
 c(mu_1 - T_test*stand_err_mu_1, mu_1 + T_test*stand_err_mu_1)
 ```
 > From the calculation above, we are 99% confidence that the marginal mean for disk 1 using the Satterthwaite procedure is between 39.485 and 72.781. 
-
-
-
-
-
-
-
-
-
-
-
-
