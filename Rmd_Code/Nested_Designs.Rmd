@@ -5,7 +5,7 @@ date: "2/28/2019"
 output: html_document
 ---
 
-##26-4 
+## 26-4 
 
 ### Data Loading 
 ```{r}
@@ -22,10 +22,10 @@ colnames(data)[colnames(data)=="V3"] <- "Operator"
 colnames(data)[colnames(data)=="V4"] <- "Days"
 ```
 
-###a 
-Obtain the residuals for nested design model with fixed factor effects and plot them against the fitted values.
-###b 
-Prepare alig~cd residual dot plots by machince.
+### a 
+#### Obtain the residuals for nested design model with fixed factor effects and plot them against the fitted values.
+### b 
+#### Prepare alig~cd residual dot plots by machince.
 ```{r}
 data$Machine = factor(data$Machine)
 data$Operator= factor(data$Operator)
@@ -41,28 +41,28 @@ aligned.dot.plot2(modelfix$residuals,data$Machine)
 ```
 The nested model seems to be appropriate. And the aligned plot supports the conclusion. Normality assumption does not hold. The variance of residual seems to be constant across the groups.
 
-#26-5
+# 26-5
 
-###a 
-Can the operator effects be distinguished from the effects of shift~ in this study?
+### (a)
+#### Can the operator effects be distinguished from the effects of shift~ in this study?
 No, operator effects can not be distinguisted from the effect of shift.
 
-###b
-Plot the data
+### (b)
+#### Plot the data
 ```{r}
 ggplot(data = data, aes(x= Cases, y= Machine, colour=Operator))+
   geom_point() +  geom_jitter() 
 ```
 > From the figure above, we can see that "Machine 3" can produce more cases. 
 
-###c
-Obtain the analysis of variance table
+### (c)
+#### Obtain the analysis of variance table
 ```{r}
 summary(modelfix)
 ```
 
-###d
-Test whether or not the mean outputs differ for the three machine models.
+### (d)
+#### Test whether or not the mean outputs differ for the three machine models.
 ```{r}
 # from the anova table above
 MSA = 847.8
@@ -78,11 +78,12 @@ p_value
 we want to test the following hypothesis:
 $$ Ho : \sigma^2_{\alpha} = 0  $$
 $$ Ha : \sigma^2_{\alpha} \neq  0  $$
-For fixed B nested in fixed A, the F* value is calculated to be 35.9. 
+
+> For fixed B nested in fixed A, the F* value is calculated to be 35.9. 
 Since the p value of this test is 2.9e-10 smaller than 0.01, so we reject the Ho and support Ha where there is variation in mean outputs among three machines.
 
-###e
-Test whether or not the mean outputs differ for the operators assigned to each machine
+### (e)
+#### Test whether or not the mean outputs differ for the operators assigned to each machine
 ```{r}
 MSAB = 252.5
 F_test = MSAB/MSE
@@ -96,10 +97,11 @@ we want to test the following hypothesis:
 
 $$ Ho : \sigma^2_{B(A)} = 0  $$
 $$ Ha : \sigma^2_{B(A)} \neq  0  $$
-For fixed B nested in fixed A, F* is calculated to be 10.70. Since the p value of this test is 6.98e-10 and smaller than 0.01, we reject the Ho and support Ha where there is variation in mean outputs among operators.
 
-###f
-Test for each machine separately whether or not the mean outputs for the four operators differ.
+> For fixed B nested in fixed A, F* is calculated to be 10.70. Since the p value of this test is 6.98e-10 and smaller than 0.01, we reject the Ho and support Ha where there is variation in mean outputs among operators.
+
+### (f)
+#### Test for each machine separately whether or not the mean outputs for the four operators differ.
 ```{r}
 df= data.frame(fitted_values = modelfix$fitted.values)
 df$Machine = data$Machine
@@ -128,20 +130,20 @@ we want to test the following:
 
 (1)
 $$ Ho : \sigma^2_{\beta(A1)} = 0 \  v.s  \ Ha : \sigma^2_{\beta(A1)} \neq  0  $$
-we find p_value = 1.285e-04, which is smaller than 0.01, so reject H0 and conclude that there is operator effect on machine 1.
+> we find p_value = 1.285e-04, which is smaller than 0.01, so reject H0 and conclude that there is operator effect on machine 1.
 
 (2)
 
 $$ Ho : \sigma^2_{\beta(A2)} = 0 \  v.s  \ Ha : \sigma^2_{\beta(A2)} \neq  0  $$
-we find p_value = 4.941e-09, which is smaller than 0.01, so reject H0 and conclude that there is operator effect on machine 2.
+> we find p_value = 4.941e-09, which is smaller than 0.01, so reject H0 and conclude that there is operator effect on machine 2.
 
 (3)
 
 $$ Ho : \sigma^2_{\beta(A3)} = 0 \  v.s  \ Ha : \sigma^2_{\beta(A3)} \neq  0  $$
-we find p_value = 0.142, which is larger than 0.01, so reject Ha and conclude that there is no operator effect on machine 3.
+> we find p_value = 0.142, which is larger than 0.01, so reject Ha and conclude that there is no operator effect on machine 3.
 
-###g
-What is the family level of significance for the combined tests in parts (d). (e), and (f) using the Bonferroni inequality.
+### (g)
+#### What is the family level of significance for the combined tests in parts (d). (e), and (f) using the Bonferroni inequality.
 
 There will be 5 tests from parts (def), so by using Bonferroni procedure, and family level of significance should be smaller than 5*0.01 = 0.05.
 
