@@ -5,7 +5,7 @@ date: "2/24/2019"
 output: html_document
 ---
 # 25-16
-Data-Loading
+### Data-Loading
 ```{r}
 setwd("/Users/cs0823/Documents/STA_207/dataset")
 data = read.table(file = "Data25_16.csv", header= FALSE, sep = ",")
@@ -15,7 +15,9 @@ colnames(data)[colnames(data)=="V3"] <- "Make_of_device"
 colnames(data)[colnames(data)=="V4"] <- "Rep"
 ```
 
-(a) Test whether or not the two factors interact
+### (a)
+#### Test whether or not the two factors interact
+
 ```{r}
 a = 3
 b = 3
@@ -79,14 +81,16 @@ pf(MSAB/MSE, (a-1)*(b-1), (n-1)*a*b, lower.tail=FALSE)
 ```
  > H0: sigma^2_alpha_beta = 0 vs. Ha: sigma^2_alpha_beta > 0. Since F* is calculated to be 5.84, which is larger than critical value of 3.89 for alpha = 0.01, reject H0 and conclude that there is indeed an interaction effect. The p-value is approximately 0.000994.
 
-(b) find point estimate of $\sigma^2_{\alpha\beta}$
+### (b)
+#### find point estimate of $\sigma^2_{\alpha\beta}$
 A point estimate of $\sigma^2_{\alpha\beta}$ is $s^2_{\alpha\beta}=\frac{MSAB-MSE}{n}$
 
 ```{r}
 (MSAB - MSE)/n
 ```
  
- (c) Test whether or not factor A main effects are present
+### (c) 
+#### Test whether or not factor A main effects are present
 ```{r}
 MSA = n * b * sum(A_effects^2) / (a-1)
 MSA
@@ -101,7 +105,8 @@ qf(1-alpha, a-1, (n-1)*a*b)
 ```
  > H0: sigma^2_alpha = 0 vs. Ha: sigma^2_alpha > 0. Since F* is calculated to be 0.236, which is smaller than critical value of 5.248 for alpha = 0.01. We fail to reject the null hypothesis. It is important to test for the presence of factor A main effects since factor A is random and, if its effects are present, we would need a mixed model since factor B is fixed.
  
-(d) Test whether or not factor B main effects are present
+### (d)
+#### Test whether or not factor B main effects are present
 ```{r}
 MSB = n * a * sum(B_effects^2) / (b-1)
 MSB
@@ -116,7 +121,8 @@ qf(1-alpha, b-1, (a-1)*(b-1))
 ```
 > H0: beta_j = 0 for j = 1,2,3 vs. Ha: not all beta_j = 0. Since F* is calculated to be 0.047, which is smaller than critical value of 18 for alpha = 0.01. We fail to reject the null hypothesis. It is important to test for the present of factor B main effects since factor B is fixed and, if its effects are present, we would need a mixed model since factor A is random.
 
-(e) Use the Tukey procedure and a 95 percent family confidence coefficient to make all pairwise comparisons. 
+### (e) 
+#### Use the Tukey procedure and a 95 percent family confidence coefficient to make all pairwise comparisons. 
 ```{r}
 # Pairwise differences between means
 D1 = B_means[1] - B_means[2]
@@ -140,7 +146,8 @@ c(D3 - T_test*stand_err, D3 + T_test*stand_err)
 ```
 > We are 95% confidence that the true pairwise differences between the means for the three disk drive were calcualted above. Since each of the confidence intervals for the pairwise comparisons between the means for the three disk drive makes contains 0 at the 0.05 level of significance, we can conclude there is no difference between drive 1 and drive 2, drive 1 and 3, and drive 2 and 3.
 
-(f) Use the Satterthwaite procedure to obtain an approximate 99 percent confidence interval for mu_dot_1
+### (f) 
+#### Use the Satterthwaite procedure to obtain an approximate 99 percent confidence interval for mu_dot_1
 ```{r}
 # Marginal mean
 mu_1 = B_means[1]
