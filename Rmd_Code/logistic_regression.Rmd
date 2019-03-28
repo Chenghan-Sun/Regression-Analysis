@@ -1,0 +1,117 @@
+---
+title: "Probelm 14-9 and 11"
+author: "Chenghan Sun"
+date: "3/15/2019"
+output: html_document
+---
+
+# 14-9
+## load data 
+```{r}
+setwd("/Users/cs0823/Documents/STA_207/dataset")
+data = read.table(file = "Data14_9.csv", header= FALSE, sep = ",")
+colnames(data)[colnames(data)=="V1"] <- "Ability"
+colnames(data)[colnames(data)=="V2"] <- "Stability"
+```
+
+## (a) Find the maximum likelihold estimates of beta_0 and beta_1
+```{r}
+model=glm(Ability~Stability, family="binomial", data= data)
+coef(model)
+```
+> from the results above: b0 = -10.30892518 b1 = 0.01891983
+  Fitted response function: 
+  
+$$ \pi_{i} = \frac{exp(XB) }{1+ exp(XB))} = [1+exp(-XB)]^{-1} \ where \ XB = -10.31 +0.019X_{i} $$ 
+
+## (b) Obtain a scater plot of the data 
+```{r}
+n=nrow(data)
+Beta = as.matrix(coef(model), ncol=1, nrow=2)
+X = cbind( rep(1,n), data$Stability )
+pi_fitted = ( 1 + exp(-1* (X%*%Beta) ) )^(-1)
+plot(y = pi_fitted, x=data$Stability)
+lines(lowess(data$Stability, data$Ability), col=2)
+```
+
+## (c) Obtain exp(b1) and interpret this number
+```{r}
+exp(coef(model)[2])
+```
+> The odds of a stability are estimated to increase by 1.91% with one stability score increases.
+
+## (d)
+```{r}
+x = as.vector(c(1, 550))
+pi_fitted = (1 + exp(-1*t(x)%*%Beta))^(-1)
+pi_fitted 
+```
+> The estimated probability to complete the task at Stability score =550 is 0.524.
+
+## (e)  Estimate the emotional stability test score for which 70 percent of the employees with this test score are expected to be able to perform in a task group
+```{r}
+logit = function(p) { p / (1-p) }
+b0 =coef(model)[1]
+b1 =coef(model)[2]
+score = (logit(0.7) - b0 ) / b1
+score
+```
+> The stability score to have probability of 70% of employees to complete the tasks is estimated at 668.2015.
+
+# 14-11
+## load data
+```{r}
+setwd("/Users/cs0823/Documents/STA_207/dataset")
+data = read.table(file = "Data14_11.csv", header= FALSE, sep = ",")
+colnames(data)[colnames(data)=="V1"] <- "X"
+colnames(data)[colnames(data)=="V2"] <- "Number"
+colnames(data)[colnames(data)=="V3"] <- "Y"
+```
+
+## (a) Plot the estimated proportions Pj = Y.j / nj 
+```{r}
+P = data$Y/500
+data$P = P
+plot(data$X, data$P)
+```
+> The logistic response function seems to be appropriate.
+
+## (b) Find the maximum likelihood estimates of beta_0 and beta_1
+```{r}
+model = glm(data$P~data$X, family=binomial(link="logit"), data=data)
+coef(model)
+```
+> from the results above: 
+Model: 
+$$ \hat{\pi} = \frac{\exp(-2.0766+0.1359X_i)}{1+\exp(-2.0766+0.1359X_i)} $$
+
+## (c) Obtain a scatter plot of the data with the estimated proportions from part (a)
+```{r}
+data_new = data.frame(X = seq(min(data$X), max(data$X),len=6))
+data_new$P = predict(model, data_new, type="response")
+
+plot(data_new$X, data_new$P)
+lines(P ~ X, data_new)
+```
+> the logistic response function seems to fit well.
+
+## (d) Obtain exp(b1) and interpret this number
+```{r}
+exp(coef(model)[2])
+```
+> The odds that a bottle is returned increases by about 14.5% with each additional 1 cent increase in deposit level.
+
+## (e) What is the estimated probability that a bottle will be returned when the deposit is 15 cents?
+```{r}
+b0 = -2.0765647
+b1 = 0.1358508 
+exp(b0+b1*15) / (1 + exp(b0+b1*15))
+```
+> the estimated probability is 0.4903005.
+
+## (f) Estimate the amount of deposit for which 75 percent of the bottles are expected to be returned
+```{r}
+(log(0.75 / (1 - 0.75)) - b0) / b1
+```
+> the amount of deposit is estimated to be 23.37253 ~ 23.  
+
