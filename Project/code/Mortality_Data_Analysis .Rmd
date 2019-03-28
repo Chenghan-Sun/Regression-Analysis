@@ -1,0 +1,292 @@
+---
+title: "Final_project_207"
+author: "Ran Sun / Chenghan Sun"
+date: "3/16/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#loading data
+```{r}
+library('readxl')
+library('leaps')
+library('SuppDists')
+library('ALSM')
+library('car')
+library(MASS)
+library(glmnet)
+setwd("/Users/cs0823/Documents/STA_207/project")
+data = read_excel("mortality_ss11.xls",col_names = T)
+#import data
+colnames(data) = c("X1","X2","X3","X4","X5","X6","Y","City")
+```
+mortality is response variable.
+
+# transformation
+A preliminary investifation via matrix plot show that some ofthe variables need to be transformed.we draw the scatterplot matrix and calculate correlation matrix between all numerical variables
+```{r}
+which(is.na(data)) # No missing value
+head(data)
+summary(data)
+
+#nuimerical part of data
+num_data = data[,seq(1:7)]
+
+#X variable of data
+num_dataX = data[,seq(1:6)]
+
+```
+
+```{r fig.height=10, fig.width=12, message=FALSE, warning=FALSE}
+library(GGally)
+ggpairs(num_data) + theme_grey(base_size = 8)
+
+#There exist obvious nonlinearity, therefore, we need to perform data transformation.
+#transformed data
+dataT = num_data
+# Histograms of all the quantitative variables
+par(mfrow=c(2,4))
+hist(dataT$Y)
+hist(dataT$X1)
+hist(dataT$X2)
+hist(dataT$X3)
+hist(dataT$X4)
+hist(dataT$X5)
+hist(dataT$X6)
+
+```
+
+```{r}
+#perform boxcox procedure
+par(mfrow=c(2,4))
+boxcox(data = dataT, Y~X1+X2+X3+X4+X5+X6)
+boxcox(data = dataT, X1~Y+X2+X3+X4+X5+X6)
+boxcox(data = dataT, X2~X1+Y+X3+X4+X5+X6)
+boxcox(data = dataT, X3~X1+X2+Y+X4+X5+X6)
+boxcox(data = dataT, X4~X1+X2+X3+Y+X5+X6)
+boxcox(data = dataT, X5~X1+X2+X3+X4+Y+X6)
+boxcox(data = dataT, X6~X1+X2+X3+X4+X5+Y)
+```
+
+##perform transform 
+according to box-cox procedure
+```{r fig.height=10, fig.width=12, message=FALSE, warning=FALSE}
+dataT$Y = (num_data$Y)^1.3
+dataT$X1 = (num_data$X1)^1.5
+dataT$X2 = (num_data$X2)^3
+dataT$X3 = sqrt(num_data$X3)
+dataT$X4 = 1/(sqrt(num_data$X4))
+dataT$X5 = log(num_data$X5)
+dataT$X6 = log(num_data$X6)
+
+par(mfrow=c(2,4))
+hist(dataT$Y)
+hist(dataT$X1)
+hist(dataT$X2)
+hist(dataT$X3)
+hist(dataT$X4)
+hist(dataT$X5)
+hist(dataT$X6)
+
+ggpairs(dataT) + theme_grey(base_size = 8)
+```
+
+```{r}
+#now dataT is the data set we are using
+#standardize
+#independent variables have been standardized so that they are equally scaled
+dataTS = data.frame(scale(dataT))
+
+#get eigen value of X'X, to compare nonsingualrity of R
+eigen_dec = eigen(t(data.matrix(dataTS))%*%data.matrix(dataTS))
+eigen_dec$values
+
+max(eigen_dec$values)/min(eigen_dec$values)
+ratio = seq(1:7)
+for (i in seq(1:7)){
+  ratio[i] = sum(eigen_dec$values[1:i])/sum(sum(eigen_dec$values))
+}
+ratio
+#max(eigen_dec$values)/(sum(eigen_dec$values))
+
+#We can see there is a strong multicollinearity.
+# the first two eigenvalue explains about 70%, the first three explains about 83%
+```
+
+
+```{r}
+#preliminary model
+model_lm = lm(data = dataTS, Y~X1+X2+X3+X4+X5+X6)
+
+anova(model_lm)
+summary(model_lm)
+par(mfrow = c(2, 2))
+plot(model_lm) 
+
+vif(model_lm) #standard rule of thumb, none of the vif is above 10
+
+#from the plots we can see first-order model is appropriate.
+```
+```{r}
+#model selection
+model_AIC_back = stepAIC(model_lm, direction = "backward", k = 2)
+```
+
+```{r}
+model_null <- lm(data = dataTS, Y ~ 1)
+model_AIC_for = stepAIC(model_null, scope = list(upper =model_lm),direction = "forward", k = 2)
+```
+
+```{r}
+model_AIC_both = stepAIC(model_null, scope = list(upper =model_lm),direction = "both", k = 2)
+model_AIC_both$anova
+```
+
+We tested forward, backward, and both direction AIC. And they all lead to the same result.
+We can see stepwise method with AIC criterion choose variable X1, X2, X3, X6.
+
+```{r}
+#reduced model
+reduced_model_lm = lm(data = dataTS, Y~X1+X2+X3+X6)
+
+anova(reduced_model_lm )
+summary(reduced_model_lm )
+par(mfrow = c(2, 2))
+plot(reduced_model_lm ) 
+
+vif(reduced_model_lm ) 
+
+# calculate AIC
+SSR_reduced_lm = sum(reduced_model_lm$residuals^2)
+ev_reduced_lm = eigen(t(data.matrix(data_selectX))%*%data.matrix(data_selectX))$values
+df_reduced_lm = sum(ev_reduced_lm)/sum(ev_reduced_lm)
+df_reduced_lm
+n = nrow(data_selectX)
+AIC_reduced_lm = n*log(SSR_reduced_lm) + 2*df_reduced_lm
+AIC_reduced_lm
+```
+We can see that the VIF now reduced adn become small, which indicates no multicolinearity existed anymore. 
+
+Then we perform ridge regression.
+Then we use GCV criterion to estimate the penalty parameter k
+
+```{r}
+#select X1, X2, X3, X6
+data_selectX = data.frame(dataTS$X1,dataTS$X2,dataTS$X3,dataTS$X4,dataTS$X5,dataTS$X6)
+data_selectXY = data.frame(dataTS$X1,dataTS$X2,dataTS$X3,dataTS$X4,dataTS$X5,dataTS$X6,dataTS$Y)
+#cross validate quanity against lambda
+#alpha = 0 means ridge
+cvfit = cv.glmnet(x = data.matrix(data_selectX), y = dataTS$Y, intercept = FALSE,alpha = 0)
+plot(cvfit)
+
+loglambda_min = cvfit$lambda.min
+loglambda_min
+#from the plot we can see the minimum is log(lambda) = 0.2505145
+lambdaop = exp(loglambda_min) #lambda optimal is 1.284686
+lambdaop
+```
+
+```{r}
+
+#model_ridge=  glmnet(x = data.matrix(data_selectX) , y = dataTS$Y, alpha = 0, lambda = lambdaop)
+
+#coef(cvfit)
+#model_ridge =  glmnet(x = data.matrix(dataTS[,1:6]), y = dataTS$Y, alpha = 0, lambda = 2)
+#summary(model_ridge)
+#yfit = predict(cvfit,newx = data.matrix(data_selectX))
+#plot(dataTS$Y,yfit)
+
+```
+
+```{r}
+library(psych)
+#ridge regression
+lmridge = lm.ridge(dataTS.Y~dataTS.X1+dataTS.X2+dataTS.X3+dataTS.X4+dataTS.X5+dataTS.X6,data = data_selectXY,lambda = lambdaop)
+
+#coefficient
+coeff = lmridge$coef
+coeff
+#y predict
+lmridge_pred = data.matrix(data_selectX)%*%coeff
+
+# std.err and t values
+X = as.matrix(dataTS[,1:6])
+Y = as.vector(dataTS[,7])
+H = X %*% solve(t(X)%*%X+lambdaop*diag(6)) %*% t(X)
+#Y = H %*% Y
+SSE = norm((Y - H%*%Y), type = "2")
+var = SSE/tr((diag(nrow(dataTS)) - H)^2)
+s_2 = var*solve(t(X)%*%X+lambdaop*diag(6)) %*% t(X)%*%X %*% solve(t(X)%*%X+lambdaop*diag(6))
+sqrt(diag(s_2))
+
+t_values = (as.vector(coeff) - mean(coeff)) / sqrt(diag(s_2)) / sqrt(nrow(dataTS))
+t_values
+
+par(mfrow = c(2, 2))
+plot(dataTS$Y,lmridge_pred, xlab = "original Y values", ylab = "fitted Y values by ridge", main = "original values VS fitted values for Ridge") 
+abline(0, 1)
+
+#residual
+residual = lmridge_pred - dataTS$Y
+plot(lmridge_pred, residual, xlab = "fitted values", ylab = "residuals", main = "fitted values VS residuals plot for Ridge")
+hist(residual)
+qqnorm(residual)
+qqline(residual)
+#result show the ridge model is appropriate
+
+#calculate AIC based on reference 
+SSR_ridge = sum(residual^2)
+SSR_ridge
+ev_ridge = eigen(t(data.matrix(data_selectX))%*%data.matrix(data_selectX))$values
+df_ridge = sum(ev_ridge)/sum(ev_ridge+lambdaop)
+df_ridge
+n = nrow(data_selectX)
+AIC_ridge = n*log(SSR_ridge) + 2*df_ridge
+AIC_ridge
+```
+
+better transformaiton and adding nonlinear terms may improve the data analysis.
+
+Now we see if lasso is better, (which should not be)
+```{r}
+#lasso
+cvfit_lasso = cv.glmnet(x = data.matrix(data_selectX), y = dataTS$Y, intercept = FALSE)
+plot(cvfit_lasso)
+
+loglambda_min_lasso = cvfit_lasso$lambda.min
+loglambda_min_lasso
+#from the plot we can see the minimum is log(lambda) = 0.04178834
+lambdaop_lasso = exp(loglambda_min_lasso) #lambda optimal is 1.042674
+lambdaop_lasso
+
+```
+```{r}
+#lasso regression
+y_pred_lasso = predict(cvfit_lasso,newx = data.matrix(data_selectX))
+coef(cvfit_lasso)
+residual_lasso = y_pred_lasso - dataTS$Y
+
+# plots
+par(mfrow = c(2, 2))
+plot(dataTS$Y,y_pred_lasso, xlab = "original Y values", ylab = "fitted Y values by ridge", main = "original values VS fitted values for Lasso")
+abline(0, 1)
+#plot(residual_lasso) #not useful since no time dependent 
+plot(y_pred_lasso, residual_lasso, xlab = "fitted values", ylab = "residuals", main = "fitted values VS residuals plot for Lasso")
+hist(residual_lasso)
+qqnorm(residual_lasso)
+qqline(residual_lasso)
+
+# calculate AIC (maybe not suitable for lasso)
+SSR_lasso = sum(residual_lasso^2)
+ev_lasso = eigen(t(data.matrix(data_selectX))%*%data.matrix(data_selectX))$values
+df_lasso = sum(ev_lasso)/sum(ev_lasso+lambdaop_lasso)
+n = nrow(data_selectX)
+AIC_lasso = n*log(SSR_lasso) + 2*df_lasso
+AIC_lasso
+```
+
+
+
